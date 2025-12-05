@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
@@ -58,25 +57,34 @@ public class OcppHandler implements Runnable {
                     printIncoming(msg);
                     this.handleReq(msg);
                 } catch (NoSuchElementException e) {
-                    this.protocolUpgraded = false;
-                    try {
-                        System.out.println("Closing connection to " + clientInetAddress + "\n");
-                        clientSocket.close();
-                    } catch (IOException ex) {
-                        this.protocolUpgraded = false;
-                        throw new RuntimeException(ex);
-                    }
+                    closeClientSocket();
                     break;
                 }
             } else { // websocket protocol -> parse Websocket frames
                 // https://datatracker.ietf.org/doc/html/rfc6455#section-5
-                this.parseWebsocketFrames(this.clientIn);
+                try {
+                    this.parseWebsocketFrames(this.clientIn);
+                } catch (OCPPProtocolException e) {
+                    closeClientSocket();
+                    break;
+                }
                 // TODO handle complete message by appropriate methods
             }
         }
     }
 
-    private void parseWebsocketFrames(InputStream clientIn) {
+    private void closeClientSocket() {
+        this.protocolUpgraded = false;
+        try {
+            System.out.println("Closing connection to " + clientInetAddress + "\n");
+            clientSocket.close();
+        } catch (IOException ex) {
+            this.protocolUpgraded = false;
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private byte[] parseWebsocketFrames(InputStream clientIn) throws OCPPProtocolException {
         // https://datatracker.ietf.org/doc/html/rfc6455#section-5
         try {
             byte byte1 = clientIn.readNBytes(1)[0];
@@ -88,6 +96,11 @@ public class OcppHandler implements Runnable {
 
             byte byte2 = clientIn.readNBytes(1)[0];
             boolean MASK = bitAt(byte2, 0);
+
+            if (!MASK) {
+                throw new OCPPProtocolException("Client requests need to be masked.");
+            }
+
             long PAYLOAD_LEN = byte2 & 0x7F;
             if (PAYLOAD_LEN == 126) {
                 byte[] extendedLength = clientIn.readNBytes(2);
@@ -97,19 +110,36 @@ public class OcppHandler implements Runnable {
                 PAYLOAD_LEN = ByteBuffer.wrap(extendedLength).getLong(); // ByteOrder.BIG_ENDIAN by default ?!
             }
 
-            int MASKING_KEY;
-            if (MASK) {
-                byte[] maskingKey = clientIn.readNBytes(4);
-                MASKING_KEY = ByteBuffer.wrap(maskingKey).getInt();
+            byte[] MASKING_KEY = clientIn.readNBytes(4);
+
+            // no extension data -> only application data
+            if (PAYLOAD_LEN > Integer.MAX_VALUE) {
+                // very unlikely > 2GB payload ==> just cast to int for now
+                // TODO theoretically need to read in chunks
             }
+            byte[] payload = clientIn.readNBytes((int) PAYLOAD_LEN);
+            unmaskPayload(payload, MASKING_KEY);
 
-            // TODO
-
+            if (FIN) {
+                return payload;
+            } else { // instead of recursion could use while !FIN and ByteArrayOutputStream for better efficiency
+                byte[] nextPayload = parseWebsocketFrames(clientIn);
+                return ByteBuffer.allocate(payload.length + nextPayload.length).put(payload).put(nextPayload).array();
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
+        // TODO handle fragmentation, FIN
         // TODO return total message!
+        // TODO handle opcodes i.e., ping pong
+    }
+
+    private void unmaskPayload(byte[] payloadBytes, byte[] maskingKey) { // unmask payloadBytes inPlace
+        byte[] unmasked = new byte[payloadBytes.length];
+        for (int i = 0; i < payloadBytes.length; i++) {
+            payloadBytes[i] = (byte) (payloadBytes[i] ^ maskingKey[i % 4]);
+        }
     }
 
     private static boolean bitAt(byte b, int pos) { // MSB to LSB;
