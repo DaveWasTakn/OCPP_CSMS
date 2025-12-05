@@ -1,7 +1,10 @@
 package com.dave;
 
 import com.dave.Exception.HttpParseException;
+import com.dave.Exception.OcppProtocolException;
 import com.dave.Exception.ProtocolException;
+import com.dave.OcppProtocol.OcppLogic;
+import com.dave.OcppProtocol.OcppLogic16;
 import com.dave.StreamProcessor.HTTPReq;
 import com.dave.StreamProcessor.HttpStreamProcessor;
 import com.dave.StreamProcessor.StreamProcessor;
@@ -28,7 +31,8 @@ public class OcppHandler implements Runnable {
     final HttpStreamProcessor httpStreamProcessor = new HttpStreamProcessor();
     final WebSocketStreamProcessor webSocketStreamProcessor = new WebSocketStreamProcessor();
 
-    final String ocppVersion = "ocpp1.6"; // TODO refactor!
+    final String ocppVersion = "ocpp1.6"; // TODO refactor! set dynamically based on agreed upon version
+    final OcppLogic ocppLogic = new OcppLogic16(); // TODO refactor! set dynamically based on agreed upon version
 
     public OcppHandler(Socket clientSocket) {
         this.clientSocket = clientSocket;
@@ -40,20 +44,6 @@ public class OcppHandler implements Runnable {
             throw new RuntimeException(e);
         }
         System.out.println("Connected to " + clientInetAddress + "\n");
-    }
-
-    private void logIncoming(String req) {
-        printReq(req, " Receiving from: " + this.clientInetAddress + ":");
-    }
-
-    private void logOutgoing(String req) {
-        printReq(req, "---- Sending to: " + this.clientInetAddress + ":");
-    }
-
-    private void printReq(String req, String info) {
-        System.out.println("-----------------------------------" + info);
-        System.out.println(req);
-        System.out.println("-------------------------------------------------------------------\n");
     }
 
     @Override
@@ -82,7 +72,12 @@ public class OcppHandler implements Runnable {
     }
 
     private void handleOcppReq(String msg) {
-
+        try {
+            this.ocppLogic.onMsg(msg);
+        } catch (OcppProtocolException e) {
+            System.out.println("Ocpp protocol exception: " + e.getMessage());
+            this.closeClientSocket();
+        }
     }
 
     private void closeClientSocket() {
@@ -150,6 +145,20 @@ public class OcppHandler implements Runnable {
             this.protocolUpgraded = false;
             throw new RuntimeException("Failed to compute Sec-WebSocket-Accept", e);
         }
+    }
+
+    private void logIncoming(String req) {
+        printReq(req, " Receiving from: " + this.clientInetAddress + ":");
+    }
+
+    private void logOutgoing(String req) {
+        printReq(req, "---- Sending to: " + this.clientInetAddress + ":");
+    }
+
+    private void printReq(String req, String info) {
+        System.out.println("-----------------------------------" + info);
+        System.out.println(req);
+        System.out.println("-------------------------------------------------------------------\n");
     }
 
 }

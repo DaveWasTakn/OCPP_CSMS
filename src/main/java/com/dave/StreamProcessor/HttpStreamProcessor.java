@@ -36,13 +36,8 @@ public class HttpStreamProcessor implements StreamProcessor {
 
     @Override
     public void send(String message, OutputStream outputStream) throws IOException {
-//        try {
-            outputStream.write(message.getBytes(StandardCharsets.UTF_8));
-            outputStream.flush();
-//        } catch (IOException e) {
-//            System.out.println("Could not send message");
-//            throw new RuntimeException(e);
-//        }
+        outputStream.write(message.getBytes(StandardCharsets.UTF_8));
+        outputStream.flush();
     }
 
 }
