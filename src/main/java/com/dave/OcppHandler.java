@@ -3,8 +3,8 @@ package com.dave;
 import com.dave.Exception.HttpParseException;
 import com.dave.Exception.OcppProtocolException;
 import com.dave.Exception.ProtocolException;
-import com.dave.OcppProtocol.OcppLogic;
-import com.dave.OcppProtocol.OcppLogic16;
+import com.dave.Ocpp.OcppProtocol;
+import com.dave.Ocpp.OcppProtocol_v16;
 import com.dave.StreamProcessor.HTTPReq;
 import com.dave.StreamProcessor.HttpStreamProcessor;
 import com.dave.StreamProcessor.StreamProcessor;
@@ -21,28 +21,30 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class OcppHandler implements Runnable {
-    final Socket clientSocket;
-    final String clientInetAddress;
-    boolean protocolUpgraded = false;
+    private final Socket clientSocket;
+    private final String clientInetAddress;
+    private boolean protocolUpgraded = false;
 
-    final InputStream clientIn;
-    final OutputStream clientOut;
+    private final InputStream inputStream;
+    private final OutputStream outputStream;
 
-    final HttpStreamProcessor httpStreamProcessor = new HttpStreamProcessor();
-    final WebSocketStreamProcessor webSocketStreamProcessor = new WebSocketStreamProcessor();
+    private final HttpStreamProcessor httpStreamProcessor;
+    private final WebSocketStreamProcessor webSocketStreamProcessor;
 
-    final String ocppVersion = "ocpp1.6"; // TODO refactor! set dynamically based on agreed upon version
-    final OcppLogic ocppLogic = new OcppLogic16(); // TODO refactor! set dynamically based on agreed upon version
+    private final String ocppVersion = "ocpp1.6"; // TODO refactor! set dynamically based on agreed upon version
+    private OcppProtocol ocppProtocol;
 
     public OcppHandler(Socket clientSocket) {
         this.clientSocket = clientSocket;
         this.clientInetAddress = clientSocket.getInetAddress().toString();
         try {
-            this.clientIn = clientSocket.getInputStream();
-            this.clientOut = clientSocket.getOutputStream();
+            this.inputStream = clientSocket.getInputStream();
+            this.outputStream = clientSocket.getOutputStream();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        this.httpStreamProcessor = new HttpStreamProcessor(inputStream, outputStream);
+        this.webSocketStreamProcessor = new WebSocketStreamProcessor(inputStream, outputStream);
         System.out.println("Connected to " + clientInetAddress + "\n");
     }
 
@@ -53,28 +55,24 @@ public class OcppHandler implements Runnable {
             streamProcessor = this.protocolUpgraded ? this.webSocketStreamProcessor : this.httpStreamProcessor;
             String msg;
             try {
-                msg = streamProcessor.read(this.clientIn);
+                msg = streamProcessor.read();
             } catch (ProtocolException e) {
                 closeClientSocket();
                 break;
             }
             logIncoming(msg);
-            this.handleReq(msg);
+            this.handleReq(msg, streamProcessor);
         }
     }
 
-    private void handleReq(String msg) {
-        if (!protocolUpgraded) {
-            handleHttpUpgradeReq(msg);
-        } else {
-            handleOcppReq(msg);
-        }
-    }
-
-    private void handleOcppReq(String msg) {
+    private void handleReq(String msg, StreamProcessor streamProcessor) {
         try {
-            this.ocppLogic.onMsg(msg);
-        } catch (OcppProtocolException e) {
+            if (!protocolUpgraded) {
+                handleHttpUpgradeReq(msg, streamProcessor);
+            } else {
+                this.ocppProtocol.onMsg(msg);
+            }
+        } catch (ProtocolException e) {
             System.out.println("Ocpp protocol exception: " + e.getMessage());
             this.closeClientSocket();
         }
@@ -91,11 +89,11 @@ public class OcppHandler implements Runnable {
         }
     }
 
-    private void handleHttpUpgradeReq(String msg) {
+    private void handleHttpUpgradeReq(String msg, StreamProcessor streamProcessor) throws ProtocolException {
         HTTPReq req;
         try {
             req = HTTPReq.parse(msg);
-        } catch (HttpParseException e) { // TODO log that it will be disregarded
+        } catch (HttpParseException e) {
             this.protocolUpgraded = false;
             throw new RuntimeException(e);
         }
@@ -106,14 +104,21 @@ public class OcppHandler implements Runnable {
                         && req.headers().containsKey("Sec-WebSocket-Protocol")
                         && req.headers().containsKey("Sec-WebSocket-Version")
         ) {
-            this.confirmUpgradeReq(req.headers().get("Sec-WebSocket-Key"));
+            this.confirmUpgradeReq(req.headers().get("Sec-WebSocket-Key"), streamProcessor);
+
+            String requestedProtocols = req.headers().get("Sec-WebSocket-Protocol");
+            if (requestedProtocols.isBlank() || !requestedProtocols.contains("ocpp1.6")) { // TODO refactor once other versions implemented
+                throw new OcppProtocolException("Requested OCPP versions: '" + requestedProtocols + "' not supported / yet implemented");
+            } else {
+                this.ocppProtocol = new OcppProtocol_v16(streamProcessor);
+            }
         } else {
             System.out.println("Http upgrade message did not contain the necessary OCPP headers.");
             closeClientSocket();
         }
     }
 
-    private void confirmUpgradeReq(String secWebSocketKey) {
+    private void confirmUpgradeReq(String secWebSocketKey, StreamProcessor streamProcessor) {
         Map<String, String> headers = new HashMap<>();
         headers.put("Upgrade", "websocket");
         headers.put("Connection", "Upgrade");
@@ -128,7 +133,7 @@ public class OcppHandler implements Runnable {
 
         logOutgoing(upgradeConf);
         try {
-            this.httpStreamProcessor.send(upgradeConf, this.clientOut);
+            streamProcessor.send(upgradeConf);
         } catch (IOException e) {
             System.out.println("Could not send upgrade request to " + this.clientInetAddress + "\n");
             throw new RuntimeException(e); // TODO what to do here, close connection here or maybe propagate exception up

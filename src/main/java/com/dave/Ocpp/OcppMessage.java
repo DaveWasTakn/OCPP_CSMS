@@ -1,4 +1,4 @@
-package com.dave.OcppProtocol;
+package com.dave.Ocpp;
 
 import com.dave.Exception.OcppProtocolException;
 

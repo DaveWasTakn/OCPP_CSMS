@@ -10,13 +10,21 @@ import java.nio.charset.StandardCharsets;
 
 public class HttpStreamProcessor implements StreamProcessor {
 
+    private final InputStream inputStream;
+    private final OutputStream outputStream;
+
+    public HttpStreamProcessor(InputStream inputStream, OutputStream outputStream) {
+        this.inputStream = inputStream;
+        this.outputStream = outputStream;
+    }
+
     @Override
-    public String read(InputStream inputStream) throws ProtocolException {
+    public String read() throws ProtocolException {
         StringBuilder sb = new StringBuilder();
         // read until we reach the end of a http message: "\r\n\r\n"
         try {
             int c;
-            while ((c = inputStream.read()) != -1) {
+            while ((c = this.inputStream.read()) != -1) {
                 sb.append((char) c);
                 if (
                         sb.length() >= 4
@@ -35,9 +43,9 @@ public class HttpStreamProcessor implements StreamProcessor {
     }
 
     @Override
-    public void send(String message, OutputStream outputStream) throws IOException {
-        outputStream.write(message.getBytes(StandardCharsets.UTF_8));
-        outputStream.flush();
+    public void send(String message) throws IOException {
+        this.outputStream.write(message.getBytes(StandardCharsets.UTF_8));
+        this.outputStream.flush();
     }
 
 }
