@@ -1,28 +1,28 @@
 package com.dave.Ocpp;
 
 import com.dave.Exception.OcppProtocolException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
-import java.util.Arrays;
 import java.util.List;
 
 public sealed interface OcppMessage permits CallMsg, CallResultMsg, CallErrorMsg {
+
+    ObjectMapper objectMapper = new ObjectMapper();
 
     static OcppMessage fromMessage(String msg) throws OcppProtocolException {
         throw new UnsupportedOperationException("Only callable on actual implementations");
     }
 
-    static List<String> getMsgItems(String msg) throws OcppProtocolException {
-        if (msg.length() < 3) {
-            throw new OcppProtocolException("Ocpp request is too short");
+    static List<JsonNode> getMsgItems(String msg) throws OcppProtocolException {
+        try {
+            return objectMapper.readValue(msg, new TypeReference<List<JsonNode>>() {}); // keep explicit type List<JsonNode> !!!
+        } catch (JacksonException e) {
+            throw new OcppProtocolException("Could not parse OCPP message: " + e.getMessage());
         }
-        List<String> split = Arrays.stream(msg.substring(1, msg.length() - 1).split(","))
-                .map(String::trim)
-                .map(x -> x.startsWith("\"") && x.endsWith("\"") ? x.substring(1, x.length() - 1) : x)
-                .toList();
-        if (split.size() < 3) {
-            throw new OcppProtocolException("Message received is no valid OCPP call");
-        }
-        return split;
     }
+
 
 }
