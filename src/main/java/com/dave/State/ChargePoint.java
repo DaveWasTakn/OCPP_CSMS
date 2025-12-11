@@ -1,15 +1,13 @@
 package com.dave.State;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class ChargePoint {
 
+    private String ipAddress;
     @Deprecated
     private String chargeBoxSerialNumber;
     private String model;
     private String chargePointSerialNumber;
-    private String vendor;
+    private String chargePointVendor;
     private String firmwareVersion;
     private String iccid;
     private String imsi;
@@ -17,17 +15,35 @@ public class ChargePoint {
     private String meterSerialNumber;
     private String meterType;
 
-    private final List<Runnable> observers = new ArrayList<>();
-
-    public void registerObserver(Runnable runnable) {
-        this.observers.add(runnable);
+    public ChargePoint(String ipAddress) {
+        this.ipAddress = ipAddress;
     }
 
-    private void notifyObservers() {
-        for (Runnable runnable : this.observers) {  // TODO in separate threads
-            runnable.run();
-        }
+    public ChargePoint(String ipAddress, String chargeBoxSerialNumber, String model, String chargePointSerialNumber, String chargePointVendor, String firmwareVersion, String iccid, String imsi, String iccd, String meterSerialNumber, String meterType) {
+        this.ipAddress = ipAddress;
+        this.chargeBoxSerialNumber = chargeBoxSerialNumber;
+        this.model = model;
+        this.chargePointSerialNumber = chargePointSerialNumber;
+        this.chargePointVendor = chargePointVendor;
+        this.firmwareVersion = firmwareVersion;
+        this.iccid = iccid;
+        this.imsi = imsi;
+        this.iccd = iccd;
+        this.meterSerialNumber = meterSerialNumber;
+        this.meterType = meterType;
     }
+
+    //    private final List<Runnable> observers = new ArrayList<>(); TODO observe changes not here, needs to happen higher up
+//
+//    public void registerObserver(Runnable runnable) {
+//        this.observers.add(runnable);
+//    }
+//
+//    private void notifyObservers() {
+//        for (Runnable runnable : this.observers) {  // TODO in separate threads
+//            runnable.run();
+//        }
+//    }
 
     public String getChargeBoxSerialNumber() {
         return chargeBoxSerialNumber;
@@ -35,7 +51,6 @@ public class ChargePoint {
 
     public void setChargeBoxSerialNumber(String chargeBoxSerialNumber) {
         this.chargeBoxSerialNumber = chargeBoxSerialNumber;
-        this.notifyObservers();
     }
 
     public String getModel() {
@@ -44,7 +59,6 @@ public class ChargePoint {
 
     public void setModel(String model) {
         this.model = model;
-        this.notifyObservers();
     }
 
     public String getChargePointSerialNumber() {
@@ -53,16 +67,14 @@ public class ChargePoint {
 
     public void setChargePointSerialNumber(String chargePointSerialNumber) {
         this.chargePointSerialNumber = chargePointSerialNumber;
-        this.notifyObservers();
     }
 
     public String getVendor() {
-        return vendor;
+        return chargePointVendor;
     }
 
     public void setVendor(String vendor) {
-        this.vendor = vendor;
-        this.notifyObservers();
+        this.chargePointVendor = vendor;
     }
 
     public String getFirmwareVersion() {
@@ -71,7 +83,6 @@ public class ChargePoint {
 
     public void setFirmwareVersion(String firmwareVersion) {
         this.firmwareVersion = firmwareVersion;
-        this.notifyObservers();
     }
 
     public String getIccid() {
@@ -80,7 +91,6 @@ public class ChargePoint {
 
     public void setIccid(String iccid) {
         this.iccid = iccid;
-        this.notifyObservers();
     }
 
     public String getImsi() {
@@ -89,7 +99,6 @@ public class ChargePoint {
 
     public void setImsi(String imsi) {
         this.imsi = imsi;
-        this.notifyObservers();
     }
 
     public String getIccd() {
@@ -98,7 +107,6 @@ public class ChargePoint {
 
     public void setIccd(String iccd) {
         this.iccd = iccd;
-        this.notifyObservers();
     }
 
     public String getMeterSerialNumber() {
@@ -107,7 +115,6 @@ public class ChargePoint {
 
     public void setMeterSerialNumber(String meterSerialNumber) {
         this.meterSerialNumber = meterSerialNumber;
-        this.notifyObservers();
     }
 
     public String getMeterType() {
@@ -116,6 +123,30 @@ public class ChargePoint {
 
     public void setMeterType(String meterType) {
         this.meterType = meterType;
-        this.notifyObservers();
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public void setIpAddress(String ipAddress) {
+        this.ipAddress = ipAddress;
+    }
+
+    @Override
+    public String toString() {
+        return "ChargePoint{" +
+                "ipAddress='" + ipAddress + '\'' +
+                ", chargeBoxSerialNumber='" + chargeBoxSerialNumber + '\'' +
+                ", model='" + model + '\'' +
+                ", chargePointSerialNumber='" + chargePointSerialNumber + '\'' +
+                ", vendor='" + chargePointVendor + '\'' +
+                ", firmwareVersion='" + firmwareVersion + '\'' +
+                ", iccid='" + iccid + '\'' +
+                ", imsi='" + imsi + '\'' +
+                ", iccd='" + iccd + '\'' +
+                ", meterSerialNumber='" + meterSerialNumber + '\'' +
+                ", meterType='" + meterType + '\'' +
+                '}';
     }
 }

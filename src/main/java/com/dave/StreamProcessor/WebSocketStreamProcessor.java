@@ -1,6 +1,8 @@
 package com.dave.StreamProcessor;
 
 import com.dave.Exception.WebSocketProtocolException;
+import com.dave.Logging.Logger;
+import com.dave.util.Tuple2;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,13 +11,16 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public class WebSocketStreamProcessor implements StreamProcessor {
+    private static final Logger LOGGER = Logger.INSTANCE;
 
     private final InputStream inputStream;
     private final OutputStream outputStream;
+    private final String clientIp;
 
-    public WebSocketStreamProcessor(InputStream inputStream, OutputStream outputStream) {
+    public WebSocketStreamProcessor(InputStream inputStream, OutputStream outputStream, String clientIp) {
         this.inputStream = inputStream;
         this.outputStream = outputStream;
+        this.clientIp = clientIp;
     }
 
 /* Websocket Base Framing Protocol:
@@ -44,8 +49,25 @@ source: https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
 
     @Override
     public String read() throws WebSocketProtocolException {
-        byte[] payload = parseWebsocketFrames();
-        return new String(payload, StandardCharsets.UTF_8);
+        final Tuple2<byte[], Integer> res = parseWebsocketFrames();
+        final byte[] payload = res.first();
+        final int opcode = res.second();
+
+        return switch (opcode) {
+            case 0x8 -> {
+                handleCloseFrame(payload);
+                throw new WebSocketProtocolException("Close frame received.");
+            }
+            case 0x9 -> {
+                handlePingFrame(payload);
+                yield read();
+            }
+            case 0xA -> {
+                handlePongFrame(payload);
+                yield read();
+            }
+            default -> new String(payload, StandardCharsets.UTF_8);
+        };
     }
 
     @Override
@@ -78,7 +100,7 @@ source: https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
         this.outputStream.flush();
     }
 
-    private byte[] parseWebsocketFrames() throws WebSocketProtocolException {
+    private Tuple2<byte[], Integer> parseWebsocketFrames() throws WebSocketProtocolException {
         // https://datatracker.ietf.org/doc/html/rfc6455#section-5
         try {
             byte byte1 = readByte();
@@ -86,7 +108,7 @@ source: https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
             boolean RSV1 = bitAt(byte1, 1);
             boolean RSV2 = bitAt(byte1, 2);
             boolean RSV3 = bitAt(byte1, 3);
-            int OPCODE = byte1 & ((1 << 5) - 1);
+            int OPCODE = byte1 & ((1 << 4) - 1);
 
             byte byte2 = readByte();
             boolean MASK = bitAt(byte2, 0);
@@ -115,17 +137,17 @@ source: https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
             unmaskPayload(payload, MASKING_KEY);
 
             if (FIN) {
-                return payload;
+                return new Tuple2<>(payload, OPCODE);
             } else { // instead of recursion could use while(!FIN) and ByteArrayOutputStream for better efficiency
-                byte[] nextPayload = parseWebsocketFrames();
-                return ByteBuffer.allocate(payload.length + nextPayload.length).put(payload).put(nextPayload).array();
+                byte[] nextPayload = parseWebsocketFrames().first();
+                return new Tuple2<>(
+                        ByteBuffer.allocate(payload.length + nextPayload.length).put(payload).put(nextPayload).array(),
+                        OPCODE
+                );
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new WebSocketProtocolException(e.getMessage());
         }
-
-        // TODO handle opcodes i.e., ping pong
-        // TODO opcodes only need ping pong and close since OCPP uses text only; throw ocppprotocolexception on other opcodes
     }
 
     private byte readByte() throws IOException, WebSocketProtocolException {
@@ -152,6 +174,69 @@ source: https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
             throw new IllegalArgumentException("pos must be 0..7");
         }
         return (b & (1 << (7 - pos))) != 0;
+    }
+
+    private void handleCloseFrame(byte[] payload) {
+        try {
+            LOGGER.logIncomingMsg(getCloseFrameLogRepresentation(payload), this.clientIp);
+            sendCloseFrame(payload); // echo the close frame back
+        } catch (IOException e) {
+            // its ok if it could not be sent; client may not accept any more messages
+        }
+    }
+
+    private static String getCloseFrameLogRepresentation(byte[] payload) {
+        int statusCode = 1005; // https://datatracker.ietf.org/doc/html/rfc6455#section-7.4
+        String msg = "";
+        if (payload.length >= 2) {
+            statusCode = ((payload[0] & 0xFF) << 8) | (payload[1] & 0xFF);
+            msg = new String(payload, 2, payload.length - 2, StandardCharsets.UTF_8);
+        }
+        return "CloseFrame(StatusCode=" + statusCode + ", Message=" + msg + ")";
+    }
+
+    private void handlePingFrame(byte[] payload) throws WebSocketProtocolException {
+        try {
+            LOGGER.logIncomingMsg("PingFrame", clientIp);
+            sendPongFrame(payload);
+        } catch (IOException e) {
+            throw new WebSocketProtocolException("Failed sending pong frame");
+        }
+    }
+
+    private void handlePongFrame(byte[] payload) {
+        LOGGER.logIncomingMsg("PongFrame", clientIp);
+    }
+
+    private void sendCloseFrame(byte[] payload) throws IOException {
+        LOGGER.logOutgoingMsg(getCloseFrameLogRepresentation(payload), this.clientIp);
+        sendControlFrame((byte) 0x8, payload);
+    }
+
+    public void sendCloseFrame(int statusCode, String msg) throws IOException {
+        byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+        byte[] payload = new byte[2 + msgBytes.length];
+        payload[0] = (byte) ((statusCode >> 8) & 0xFF);
+        payload[1] = (byte) (statusCode & 0xFF);
+        System.arraycopy(msgBytes, 0, payload, 2, msgBytes.length);
+        LOGGER.logOutgoingMsg(getCloseFrameLogRepresentation(payload), this.clientIp);
+        sendControlFrame((byte) 0x8, payload);
+    }
+
+    public void sendPingFrame(byte[] payload) throws IOException {
+        sendControlFrame((byte) 0x9, payload);
+    }
+
+    private void sendPongFrame(byte[] payload) throws IOException {
+        sendControlFrame((byte) 0xA, payload);
+    }
+
+    private void sendControlFrame(byte opcode, byte[] payload) throws IOException {
+        // FIN=1, RSVs = 0
+        outputStream.write(0x80 | opcode);
+        outputStream.write(payload.length);
+        outputStream.write(payload);
+        outputStream.flush();
     }
 
 }
