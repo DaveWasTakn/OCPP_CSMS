@@ -2,7 +2,7 @@ package com.dave.Ocpp;
 
 import com.dave.Exception.OcppProtocolException;
 import com.dave.Logging.Logger;
-import com.dave.State.ChargePoint;
+import com.dave.Entity.ChargePoint;
 import com.dave.StreamProcessor.StreamProcessor;
 
 import java.lang.reflect.InvocationTargetException;

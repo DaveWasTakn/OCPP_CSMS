@@ -7,7 +7,7 @@ import com.dave.Exception.ProtocolException;
 import com.dave.Logging.Logger;
 import com.dave.Ocpp.OccpSpec;
 import com.dave.Ocpp.OccpSpec_v16;
-import com.dave.State.ChargePoint;
+import com.dave.Entity.ChargePoint;
 import com.dave.StreamProcessor.HTTPReq;
 import com.dave.StreamProcessor.HttpStreamProcessor;
 import com.dave.StreamProcessor.StreamProcessor;

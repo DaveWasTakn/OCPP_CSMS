@@ -1,6 +1,8 @@
-package com.dave.State;
+package com.dave.Entity;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ChargePoint {
 
@@ -8,7 +10,7 @@ public class ChargePoint {
 
     @Deprecated
     private String chargeBoxSerialNumber;
-    private String model;
+    private String chargePointModel;
     private String chargePointSerialNumber;
     private String chargePointVendor;
     private String firmwareVersion;
@@ -19,6 +21,8 @@ public class ChargePoint {
     private String meterType;
 
     private Instant lastHeartbeat; // TODO create isAlive() method and check
+    private Status status;
+    private final Map<Integer, Connector> connectors = new HashMap<>();
 
     public ChargePoint(String ipAddress) {
         this.ipAddress = ipAddress;
@@ -33,11 +37,11 @@ public class ChargePoint {
     }
 
     public String getModel() {
-        return model;
+        return chargePointModel;
     }
 
     public void setModel(String model) {
-        this.model = model;
+        this.chargePointModel = model;
     }
 
     public String getChargePointSerialNumber() {
@@ -112,23 +116,6 @@ public class ChargePoint {
         this.ipAddress = ipAddress;
     }
 
-    @Override
-    public String toString() {
-        return "ChargePoint{" +
-                "ipAddress='" + ipAddress + '\'' +
-                ", chargeBoxSerialNumber='" + chargeBoxSerialNumber + '\'' +
-                ", model='" + model + '\'' +
-                ", chargePointSerialNumber='" + chargePointSerialNumber + '\'' +
-                ", vendor='" + chargePointVendor + '\'' +
-                ", firmwareVersion='" + firmwareVersion + '\'' +
-                ", iccid='" + iccid + '\'' +
-                ", imsi='" + imsi + '\'' +
-                ", iccd='" + iccd + '\'' +
-                ", meterSerialNumber='" + meterSerialNumber + '\'' +
-                ", meterType='" + meterType + '\'' +
-                '}';
-    }
-
     public Instant getLastHeartbeat() {
         return lastHeartbeat;
     }
@@ -137,4 +124,39 @@ public class ChargePoint {
         this.lastHeartbeat = lastHeartbeat;
     }
 
+    public Map<Integer, Connector> getConnectors() {
+        return connectors;
+    }
+
+    public void updateConnector(Connector connector) {
+        this.connectors.put(connector.getConnectorId(), connector);
+    }
+
+    @Override
+    public String toString() {
+        return "ChargePoint{" +
+                "ipAddress='" + ipAddress + '\'' +
+                ", chargeBoxSerialNumber='" + chargeBoxSerialNumber + '\'' +
+                ", chargePointModel='" + chargePointModel + '\'' +
+                ", chargePointSerialNumber='" + chargePointSerialNumber + '\'' +
+                ", chargePointVendor='" + chargePointVendor + '\'' +
+                ", firmwareVersion='" + firmwareVersion + '\'' +
+                ", iccid='" + iccid + '\'' +
+                ", imsi='" + imsi + '\'' +
+                ", iccd='" + iccd + '\'' +
+                ", meterSerialNumber='" + meterSerialNumber + '\'' +
+                ", meterType='" + meterType + '\'' +
+                ", lastHeartbeat=" + lastHeartbeat +
+                ", status=" + status +
+                ", connectors=" + connectors +
+                '}';
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
 }

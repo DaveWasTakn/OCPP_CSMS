@@ -2,7 +2,6 @@ package com.dave;
 
 import com.dave.Logging.Logger;
 
-import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
@@ -25,8 +24,10 @@ public class Main {
 
             }
 
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            LOGGER.print(e.getMessage());
+            LOGGER.print("Restarting ...");
+            main();
         }
 
     }

@@ -1,8 +1,9 @@
 package com.dave.Ocpp;
 
 import com.dave.Exception.OcppProtocolException;
-import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.List;
 
@@ -15,7 +16,7 @@ public record CallMsg(
     // Call: [<MessageTypeId>, "<UniqueId>", "<Action>", {<Payload>}]
 
     public static CallMsg fromMessage(String msg) throws OcppProtocolException {
-        List<ObjectNode> items = OcppMessage.getMsgItems(msg);
+        List<JsonNode> items = OcppMessage.getMsgItems(msg);
         if (items.size() != 4) {
             throw new OcppProtocolException("CallMsg is malformed");
         }
@@ -23,7 +24,7 @@ public record CallMsg(
                 items.get(0).intValue(),
                 items.get(1).stringValue(),
                 items.get(2).stringValue(),
-                items.get(3)
+                (ObjectNode) items.get(3)
         );
     }
 

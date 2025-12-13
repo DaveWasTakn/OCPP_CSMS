@@ -227,10 +227,12 @@ source: https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
     }
 
     public void sendPingFrame(byte[] payload) throws IOException {
+        LOGGER.logOutgoingMsg("PingFrame", clientIp);
         sendControlFrame((byte) 0x9, payload);
     }
 
     private void sendPongFrame(byte[] payload) throws IOException {
+        LOGGER.logOutgoingMsg("PongFrame", clientIp);
         sendControlFrame((byte) 0xA, payload);
     }
 
