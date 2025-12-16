@@ -1,4 +1,4 @@
-package com.dave.util;
+package com.dave.Util;
 
 import java.time.Instant;
 

@@ -1,6 +1,6 @@
 package com.dave.Logging;
 
-import com.dave.util.Utils;
+import com.dave.Util.Utils;
 
 public enum Logger {
 

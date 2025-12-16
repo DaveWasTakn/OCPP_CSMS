@@ -2,7 +2,7 @@ package com.dave.StreamProcessor;
 
 import com.dave.Exception.WebSocketProtocolException;
 import com.dave.Logging.Logger;
-import com.dave.util.Tuple2;
+import com.dave.Util.Tuple2;
 
 import java.io.IOException;
 import java.io.InputStream;

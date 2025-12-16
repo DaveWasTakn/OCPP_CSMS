@@ -1,4 +1,4 @@
-package com.dave.Ocpp;
+package com.dave.Ocpp.Message;
 
 import com.dave.Exception.OcppProtocolException;
 import tools.jackson.databind.JsonNode;
