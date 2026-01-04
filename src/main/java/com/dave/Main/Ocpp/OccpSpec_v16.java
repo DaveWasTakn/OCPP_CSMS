@@ -1,10 +1,10 @@
 package com.dave.Main.Ocpp;
 
+import com.dave.Main.Ocpp.Message.CallMsg;
+import com.dave.Main.Ocpp.Message.CallResultMsg;
 import com.dave.Main.State.ChargePoint;
 import com.dave.Main.State.Connector;
 import com.dave.Main.State.Status;
-import com.dave.Main.Ocpp.Message.CallMsg;
-import com.dave.Main.Ocpp.Message.CallResultMsg;
 import com.dave.Main.StreamProcessor.StreamProcessor;
 import com.dave.Main.Util.Utils;
 import tools.jackson.databind.JsonNode;
@@ -196,7 +196,7 @@ public class OccpSpec_v16 extends OccpSpec {
         return new CallResultMsg(uniqueId, createPayload("currentTime", Utils.dateTime())).serialize();
     }
 
-    private static void fillAvailableFields(ObjectNode src, Object dest) {
+    private void fillAvailableFields(ObjectNode src, Object dest) {
         Map<String, Field> fields = Arrays.stream(dest.getClass().getDeclaredFields()).collect(Collectors.toMap(Field::getName, Function.identity()));
         src.propertyStream().forEach(entry -> {
             if (fields.containsKey(entry.getKey())) {
@@ -234,6 +234,7 @@ public class OccpSpec_v16 extends OccpSpec {
                 }
             }
         });
+        this.chargePoint.notifyObservers();
     }
 
 }
