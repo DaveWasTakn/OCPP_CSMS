@@ -1,0 +1,44 @@
+package com.dave.Main.State;
+
+import com.dave.Main.Exception.OcppProtocolException;
+
+import java.util.Arrays;
+
+public enum ChargePointStatus {
+    // source: official OCPP-1.6J specification: https://openchargealliance.org/my-oca/ocpp/
+
+    AVAILABLE("Available", "When a Connector becomes available for a new user. (Operative)"),
+    PREPARING("Preparing", "When a Connector becomes no longer available for a new user but there is no ongoing Transaction (yet). Typically a Connector is in preparing state when a user presents a tag, inserts a cable or a vehicle occupies the parking bay. (Operative)"),
+    CHARGING("Charging", "When the contactor of a Connector closes, allowing the vehicle to charge. (Operative)"),
+    SUSPENDED_EVSE("SuspendedEVSE", "When the EV is connected to the EVSE but the EVSE is not offering energy to the EV, e.g. due to a smart charging restriction, local supply power constraints, or as the result of StartTransaction.conf indicating that charging is not allowed etc. (Operative)"),
+    SUSPENDED_EV("SuspendedEV", "When the EV is connected to the EVSE and the EVSE is offering energy but the EV is not taking any energy. (Operative)"),
+    FINISHING("Finishing", "When a Transaction has stopped at a Connector, but the Connector is not yet available for a new user, e.g. the cable has not been removed or the vehicle has not left the parking bay. (Operative)"),
+    RESERVED("Reserved", "When a Connector becomes reserved as a result of a Reserve Now command. (Operative)"),
+    UNAVAILABLE("Unavailable", "When a Connector becomes unavailable as the result of a Change Availability command or an event upon which the Charge Point transitions to unavailable at its discretion. Upon receipt of a Change Availability command, the status MAY change immediately or the change MAY be scheduled. When scheduled, the Status Notification shall be send when the availability change becomes effective. (Inoperative)"),
+    FAULTED("Faulted", "When a Charge Point or connector has reported an error and is not available for energy delivery. (Inoperative).");
+
+    private final String value;
+    private final String condition;
+
+    ChargePointStatus(String value, String condition) {
+        this.value = value;
+        this.condition = condition;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public String getCondition() {
+        return condition;
+    }
+
+    public static ChargePointStatus fromValue(String value) throws OcppProtocolException {
+        return Arrays.stream(ChargePointStatus.values()).filter(x -> x.value.equals(value)).findAny().orElseThrow(() -> new OcppProtocolException("Status '" + value + "' is not a valid charge point status"));
+    }
+
+    @Override
+    public String toString() {
+        return this.value;
+    }
+}
