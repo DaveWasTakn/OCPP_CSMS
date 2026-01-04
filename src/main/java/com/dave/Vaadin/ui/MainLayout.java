@@ -1,7 +1,9 @@
 package com.dave.Vaadin.ui;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Unit;
 import com.vaadin.flow.component.applayout.AppLayout;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -25,15 +27,20 @@ public final class MainLayout extends AppLayout {
     }
 
     private Component createHeader() {
-        var appLogo = VaadinIcon.CUBES.create();
-        appLogo.setSize("48px");
-        appLogo.setColor("green");
+        Image appLogo = new Image("wattson_light.png", "Wattson Logo");
+        appLogo.setHeight(80, Unit.PIXELS);
+        appLogo.setWidth(80, Unit.PIXELS);
 
-        var appName = new Span("My Application");
-        appName.getStyle().setFontWeight(Style.FontWeight.BOLD);
+        var appName = new Span("Watt\uD83D\uDDF2son");
+        appName.getStyle().setFontWeight(Style.FontWeight.BOLD).setFontSize("30px");
 
         var header = new VerticalLayout(appLogo, appName);
         header.setAlignItems(FlexComponent.Alignment.CENTER);
+        header.setSpacing(false);
+        header.setPadding(false);
+
+        header.getStyle().setMarginTop("16px");
+        header.getStyle().setMarginBottom("10px");
         return header;
     }
 
