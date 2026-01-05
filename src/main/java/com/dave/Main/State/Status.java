@@ -9,6 +9,18 @@ public class Status {
     private String vendorId;
     private String vendorErrorCode;
 
+    public String getTimestamp() {
+        return timestamp;
+    }
+
+    public ChargePointStatus getStatus() {
+        return status;
+    }
+
+    public String getInfo() {
+        return info;
+    }
+
     @Override
     public String toString() {
         return "Status{" +

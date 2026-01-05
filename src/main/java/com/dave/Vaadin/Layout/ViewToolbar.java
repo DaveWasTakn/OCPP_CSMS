@@ -22,7 +22,7 @@ public final class ViewToolbar extends Composite<HorizontalLayout> {
         drawerToggle.addClassNames(LumoUtility.Margin.NONE);
 
         var title = new H1(viewTitle);
-        title.addClassNames(LumoUtility.FontSize.XLARGE, LumoUtility.Margin.NONE, LumoUtility.FontWeight.LIGHT);
+        title.addClassNames(LumoUtility.FontSize.XLARGE, LumoUtility.Margin.NONE, LumoUtility.FontWeight.MEDIUM);
 
         var toggleAndTitle = new HorizontalLayout(drawerToggle, title);
         toggleAndTitle.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
